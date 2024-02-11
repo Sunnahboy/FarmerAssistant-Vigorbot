@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Assistant</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <script src="https://code.responsivevoice.org/responsivevoice.js?key=gRP3bisR"></script>
+    <!-- Your existing styles -->
+    <style>
+        body {
+            font-family: monospace;
+        }
+
+        #chatbox {
+            margin-left: auto;
+            margin-right: auto;
+            width: 80%;
+            margin-top: 50px;
+        }
+
+        .botText {
+            font-family: monospace;
+            font-size: 16px;
+            text-align: left;
+            line-height: 25px;
+            color: green;
+        }
+
+        .userText {
+            text-align: right;
+        }
+
+        #userInput {
+            margin-left: auto;
+            margin-right: auto;
+            width: 80%;
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        #textInput,
+        #imageInput {
+            border: 3px solid white;
+            border-bottom: 3px dotted #657889;
+            font-family: monospace;
+            font-size: 16px;
+            width: 60%;
+            padding: 20px;
+            color: blue;
+        }
+
+        #buttonInput,
+        #voiceButton,
+        #uploadImageButton,
+        #deleteButton {
+            padding: 5px;
+            font-family: monospace;
+            font-size: 16px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        #buttonInput {
+            border: 3px solid #58ff7c;
+            background-color: green;
+            color: white;
+        }
+
+        #voiceButton {
+            border: 3px solid #58ff7c;
+            background-color: blue;
+            color: white;
+        }
+
+        #uploadImageButton {
+            border: 3px solid #58ff7c;
+            background-color: orange;
+            color: white;
+        }
+
+        #deleteButton {
+            border: 3px solid #ff5757;
+            background-color: red;
+            color: white;
+        }
+
+        h1 {
+            text-align: center;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>FARM ASSISTANT</h1>
+    <div id="chatbox">
+        <div id="mainChat">
+            <p class='botText'><span>Hi there!</span></p>
+        </div>
+        <div id="followUpChat" style="display: none;">
+            <p class='botText'>Follow-up questions:</p>
+        </div>
+    </div>
+    <div id="userInput">
+        <input id="textInput" type="text" name="userMessage" placeholder="Type your message...">
+        <input id="buttonInput" type="submit" value="Send"/>
+        <button id="voiceButton">Voice Input</button>
+
+        <!-- Image upload section -->
+        <input type="file" id="imageInput" accept="image/*">
+        <button id="uploadImageButton">Upload Image</button>
+
+        <!-- Delete button -->
+        <button id="deleteButton">Delete Last</button>
+    </div>
+    <div id="result"></div>
+
+    <script>
+        $(document).ready(function () {
+            // Add click event handler for the Send button
+            $('#buttonInput').click(function () {
+                var userText = $('#textInput').val();
+                var userHTML = "<p class='userText'>User:<span>" + userText + "</span></p>";
+                $('#textInput').val("");
+                $('#mainChat').append(userHTML);
+                document.getElementById("userInput").scrollIntoView({ block: 'start', behavior: 'smooth' });
+
+                $.ajax({
+                    url: "/get",
+                    type: "GET",
+                    data: { userMessage: userText },
+                    success: function (data) {
+                        var botHTML = "<p class='botText'>Chatbot:<span>" + data.response + "</span></p>";
+                        $('#mainChat').append(botHTML);
+                        if (data.follow_up) {
+                            $('#followUpChat').show();
+                            var followUpHTML = "<p class='botText'><span>" + data.follow_up + "</span></p>";
+                            $('#followUpChat').append(followUpHTML);
+                        }
+                        if (data.suggestions.length > 0) {
+                            var suggestionHTML = "<p class='botText'>Suggestions:<ul>";
+                            data.suggestions.forEach(function (suggestion) {
+                                suggestionHTML += "<li>" + suggestion + "</li>";
+                            });
+                            suggestionHTML += "</ul></p>";
+                            $('#mainChat').append(suggestionHTML);
+                        }
+                    },
+                    error: function (error) {
+                        console.error('Error getting response:', error);
+                    }
+                });
+            });
+
+            // Add click event handler for the Voice Input button
+            $('#voiceButton').click(function () {
+                var recognition = new webkitSpeechRecognition() || new SpeechRecognition();
+                recognition.lang = "en-US";
+                recognition.onresult = function (event) {
+                    var userText = event.results[0][0].transcript;
+                    var userHTML = "<p class='userText'>User:<span>" + userText + "</span></p>";
+                    $('#mainChat').append(userHTML);
+                    document.getElementById("userInput").scrollIntoView({ block: 'start', behavior: 'smooth' });
+
+                    $.ajax({
+                        url: "/get",
+                        type: "GET",
+                        data: { userMessage: userText },
+                        success: function (data) {
+                            var botHTML = "<p class='botText'>Chatbot:<span>" + data.response + "</span></p>";
+                            $('#mainChat').append(botHTML);
+                            if (data.follow_up) {
+                                $('#followUpChat').show();
+                                var followUpHTML = "<p class='botText'><span>" + data.follow_up + "</span></p>";
+                                $('#followUpChat').append(followUpHTML);
+                            }
+                            if (data.suggestions.length > 0) {
+                                var suggestionHTML = "<p class='botText'>Suggestions:<ul>";
+                                data.suggestions.forEach(function (suggestion) {
+                                    suggestionHTML += "<li>" + suggestion + "</li>";
+                                });
+                                suggestionHTML += "</ul></p>";
+                                $('#mainChat').append(suggestionHTML);
+                            }
+                            var voiceButtonClicked = $('#voiceButton').data('clicked');
+                            if (voiceButtonClicked) {
+                                // Uncomment the following line if needed
+                                // responsiveVoice.speak(data.response, "US English Female");
+                            }
+                        },
+                        error: function (error) {
+                            console.error('Error getting response:', error);
+                        }
+                    });
+                };
+
+                recognition.start();
+            });
+
+            // Add click event handler for the Delete button
+            $('#deleteButton').click(function () {
+                $('.userText:last, .botText:last').remove();
+            });
+
+            // Add change event handler for the Image upload button
+            $('#imageInput').change(function () {
+                var formData = new FormData();
+                formData.append('image', $(this)[0].files[0]);
+
+                $.ajax({
+                    url: '/upload_image',
+                    type: 'POST',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        // Process the uploaded image data here
+                        console.log(data);
+                    },
+                    error: function (error) {
+                        console.error('Error uploading image:', error);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
